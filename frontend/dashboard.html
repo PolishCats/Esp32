@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 LDR Monitor – Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💡</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+<div class="app-layout">
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay"></div>
+
+  <!-- ── Sidebar ──────────────────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon">💡</div>
+        <span>LDR Monitor</span>
+      </div>
+    </div>
+
+    <div class="sidebar-nav">
+      <p class="nav-section-title">Menú</p>
+      <a href="dashboard.html" class="nav-item active">📊 Dashboard</a>
+      <a href="config.html"    class="nav-item">⚙️ Configuración</a>
+      <a href="reports.html"   class="nav-item">📋 Reportes</a>
+      <a href="credits.html"   class="nav-item">ℹ️ Créditos</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="sidebar-avatar">U</div>
+        <div class="user-details">
+          <div class="user-name" id="sidebar-username">Usuario</div>
+          <div class="user-role">Operador</div>
+        </div>
+      </div>
+      <button id="logout-btn" class="btn btn-secondary btn-block btn-sm">🚪 Cerrar Sesión</button>
+    </div>
+  </nav>
+
+  <!-- ── Main content ──────────────────────────────── -->
+  <div class="main-content">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <button class="mobile-menu-btn">☰</button>
+        <span class="topbar-title">📊 Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <div class="esp32-status">
+          <span class="status-dot disconnected" id="esp32-dot"></span>
+          <span id="esp32-label">ESP32 Desconectado</span>
+        </div>
+        <span class="current-time" id="current-time"></span>
+        <button id="simulate-btn" class="btn btn-secondary btn-sm" title="Simular datos">⚡ Simular</button>
+      </div>
+    </div>
+
+    <!-- Page content -->
+    <div class="page-content">
+
+      <!-- Stat cards -->
+      <div class="stats-grid">
+        <div class="stat-card primary">
+          <div class="stat-label">Lectura actual</div>
+          <div class="stat-value" id="current-value">—</div>
+          <div class="stat-sub" id="last-update">Sin datos</div>
+          <i class="stat-icon">💡</i>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-label">Estado de Luz</div>
+          <div id="light-status" style="margin-top:.3rem">
+            <span class="light-status-badge oscuro">🌑 Oscuro</span>
+          </div>
+          <i class="stat-icon">🌡️</i>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-label">Promedio 24h</div>
+          <div class="stat-value" id="stat-avg">—</div>
+          <div class="stat-sub">Total: <span id="stat-total">0</span> lecturas</div>
+          <i class="stat-icon">📈</i>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-label">Rango 24h</div>
+          <div class="stat-value" id="stat-min" style="font-size:1.2rem">—</div>
+          <div class="stat-sub">Máx: <span id="stat-max">—</span></div>
+          <i class="stat-icon">📉</i>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📡 Tiempo Real</span>
+            <span style="font-size:.78rem;color:var(--text-muted)">Últimas 20 lecturas</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="realtime-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🕐 Histórico 24h</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="historical-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Donut + Alerts -->
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🥧 Distribución 24h</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" style="height:220px">
+              <canvas id="donut-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🚨 Alertas
+              <span id="alert-badge" style="
+                display:none;
+                background:var(--danger);
+                color:#fff;
+                border-radius:2rem;
+                font-size:.72rem;
+                padding:.1rem .5rem;
+                margin-left:.3rem;
+              ">0</span>
+            </span>
+            <button id="cleanup-btn" class="btn btn-secondary btn-sm" title="Limpiar datos antiguos">🗑️ Limpiar</button>
+          </div>
+          <div class="card-body" style="padding:.75rem">
+            <div class="alert-list" id="alert-list">
+              <div class="empty-state"><i>🔔</i><h3>Sin alertas</h3></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- App scripts -->
+<script src="js/main.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
