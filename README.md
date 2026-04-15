@@ -4,6 +4,7 @@ A complete, modern web application to monitor LDR (Light Dependent Resistor) sen
 
 ## Features
 
+
 - **Authentication** – Secure login/register with JWT and bcrypt password hashing
 - **Real-time Dashboard** – Live chart updated every few seconds with sensor readings
 - **Historical Chart** – 24-hour history visualization
