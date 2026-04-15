@@ -377,11 +377,13 @@
   display: flex;
   align-items: center;
   gap: .75rem;
+  min-width: 100%;
 }
 
 .range-display input[type="range"] {
   flex: 1;
   accent-color: var(--primary);
+  min-width: 300px;
 }
 
 .range-value {
@@ -512,6 +514,23 @@
 }
 
 .data-table tbody tr:hover { background: var(--bg-input); }
+
+#device-keys-card .data-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+#device-keys-card .data-table th {
+  text-align: center !important;
+}
+
+#device-keys-card .data-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+#device-keys-card .data-table tbody tr:hover { background: var(--bg-input); }
 
 /* ── Loading skeleton ─────────────────────────────────── */
 .skeleton {

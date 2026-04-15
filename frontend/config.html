@@ -121,32 +121,66 @@
           </div>
         </div>
 
-        <!-- Data settings -->
+        <!-- Data retention settings -->
         <div class="card" style="margin-bottom:1.2rem">
           <div class="card-header">
-            <span class="card-title">📁 Datos y Recolección</span>
+            <span class="card-title">📁 Retención de Datos</span>
           </div>
           <div class="card-body">
-            <div class="config-grid">
-              <div class="form-group">
-                <label for="intervalo_recoleccion">Intervalo de Recolección (segundos)</label>
-                <div class="range-display">
-                  <input type="range" id="intervalo_recoleccion" name="intervalo_recoleccion"
-                         min="1" max="60" step="1" value="5">
-                  <span class="range-value" id="intervalo_recoleccion-val">5</span>
-                </div>
-                <p class="form-hint">Cada cuántos segundos el ESP32 envía datos</p>
+            <div class="form-group">
+              <label for="retencion_dias">Retención de Datos (días)</label>
+              <div class="range-display">
+                <input type="range" id="retencion_dias" name="retencion_dias"
+                       min="1" max="365" step="1" value="30">
+                <span class="range-value" id="retencion_dias-val">30</span>
               </div>
+              <p class="form-hint">Datos más antiguos son eliminados automáticamente</p>
+            </div>
+          </div>
+        </div>
 
-              <div class="form-group">
-                <label for="retencion_dias">Retención de Datos (días)</label>
-                <div class="range-display">
-                  <input type="range" id="retencion_dias" name="retencion_dias"
-                         min="1" max="365" step="1" value="30">
-                  <span class="range-value" id="retencion_dias-val">30</span>
-                </div>
-                <p class="form-hint">Datos más antiguos son eliminados automáticamente</p>
+        <!-- Device throughput settings -->
+        <div class="card" style="margin-bottom:1.2rem">
+          <div class="card-header">
+            <span class="card-title">📡 Límite de Envío por Dispositivo</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="max_datos_por_minuto">Datos por 10 minutos por dispositivo</label>
+              <div class="range-display">
+                <input type="range" id="max_datos_por_minuto" name="max_datos_por_minuto"
+                       min="1" max="120" step="1" value="60">
+                <span class="range-value" id="max_datos_por_minuto-val">60</span>
               </div>
+              <p class="form-hint">Cantidad máxima de lecturas que puede enviar un dispositivo en 10 minutos.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Device tokens -->
+        <div class="card" id="device-keys-card" style="margin-bottom:1.2rem">
+          <div class="card-header">
+            <span class="card-title">🔑 Tokens de Dispositivos</span>
+            <button id="generate-key-btn" class="btn btn-primary btn-sm">➕ Generar Token</button>
+          </div>
+          <div class="card-body" style="padding:.75rem">
+            <div style="max-height:280px;overflow:auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Dispositivo</th>
+                    <th>Token</th>
+                    <th>Estado</th>
+                    <th>Creado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="device-keys-body">
+                  <tr>
+                    <td colspan="5" style="text-align:center;color:var(--text-muted)">Cargando tokens...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

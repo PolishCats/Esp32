@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS config_usuario (
   alerta_minima         INT  NOT NULL DEFAULT 200,
   alerta_maxima         INT  NOT NULL DEFAULT 3800,
   intervalo_recoleccion INT  NOT NULL DEFAULT 5  COMMENT 'seconds',
+  max_datos_por_minuto  INT  NOT NULL DEFAULT 60 COMMENT 'max readings per minute per device',
   retencion_dias        INT  NOT NULL DEFAULT 30 COMMENT 'days to keep data',
   PRIMARY KEY (id),
   UNIQUE KEY uq_config_user (user_id),
@@ -82,6 +83,6 @@ VALUES (
 );
 
 -- Default config for admin
-INSERT IGNORE INTO config_usuario (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion)
-SELECT id, 1000, 3000, 200, 3800, 5
+INSERT IGNORE INTO config_usuario (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto)
+SELECT id, 1000, 3000, 200, 3800, 5, 60
 FROM usuarios WHERE username = 'admin';

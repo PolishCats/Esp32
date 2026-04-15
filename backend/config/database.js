@@ -27,4 +27,29 @@ async function testConnection() {
   }
 }
 
-module.exports = { pool, testConnection };
+async function ensureSchemaCompatibility() {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT COUNT(*) AS cnt
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'config_usuario'
+         AND COLUMN_NAME = 'max_datos_por_minuto'`
+    );
+
+    if ((rows[0]?.cnt || 0) === 0) {
+      await pool.execute(
+        `ALTER TABLE config_usuario
+           ADD COLUMN max_datos_por_minuto INT NOT NULL DEFAULT 60
+           COMMENT 'max readings per minute per device'`
+      );
+    }
+
+    console.log('[DB] Schema compatibility check complete.');
+  } catch (err) {
+    console.error('[DB] Schema compatibility failed:', err.message);
+    process.exit(1);
+  }
+}
+
+module.exports = { pool, testConnection, ensureSchemaCompatibility };

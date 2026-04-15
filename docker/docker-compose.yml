@@ -1,0 +1,49 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: esp32_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: esp32_root
+      MYSQL_DATABASE: esp32_ldr_monitor
+      MYSQL_USER: esp32_user
+      MYSQL_PASSWORD: esp32_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    container_name: esp32_app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: esp32_user
+      DB_PASSWORD: esp32_pass
+      DB_NAME: esp32_ldr_monitor
+      JWT_SECRET: change_this_jwt_secret_in_production
+      JWT_EXPIRES_IN: 15m
+      FRONTEND_URL: http://localhost:3000
+      API_RATE_LIMIT_MAX: 1500
+      AUTH_RATE_LIMIT_MAX: 20
+      DASHBOARD_RATE_LIMIT_MAX: 5000
+      DATA_RATE_LIMIT_MAX: 8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  mysql_data:

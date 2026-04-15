@@ -67,6 +67,33 @@
             <option value="30">Últimos 30 días</option>
             <option value="90">Últimos 90 días</option>
           </select>
+          <span id="period-summary" style="font-size:.82rem;color:var(--text-muted)"></span>
+        </div>
+      </div>
+
+      <!-- Period data preview -->
+      <div class="card" style="margin-bottom:1.2rem">
+        <div class="card-header">
+          <span class="card-title">🧾 Datos del Período</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div style="max-height:320px;overflow:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Fecha y Hora</th>
+                  <th>Valor Luz</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="period-data-body">
+                <tr>
+                  <td colspan="4" style="text-align:center;color:var(--text-muted)">Cargando datos...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

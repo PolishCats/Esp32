@@ -14,8 +14,8 @@ async function getConfig(req, res) {
       // create defaults
       await pool.execute(
         `INSERT IGNORE INTO config_usuario
-           (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion)
-         VALUES (?, 1000, 3000, 200, 3800, 5)`,
+           (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto)
+         VALUES (?, 1000, 3000, 200, 3800, 5, 60)`,
         [req.user.id]
       );
       const [newRows] = await pool.execute(
@@ -40,15 +40,20 @@ async function updateConfig(req, res) {
       alerta_minima,
       alerta_maxima,
       intervalo_recoleccion,
+      max_datos_por_minuto,
       retencion_dias,
     } = req.body;
 
     // Basic validation
-    const fields = { rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, retencion_dias };
+    const fields = { rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto, retencion_dias };
     for (const [key, val] of Object.entries(fields)) {
       if (val !== undefined && (isNaN(val) || val < 0)) {
         return res.status(400).json({ success: false, message: `Valor inválido para ${key}` });
       }
+    }
+
+    if (max_datos_por_minuto !== undefined && (max_datos_por_minuto < 1 || max_datos_por_minuto > 1200)) {
+      return res.status(400).json({ success: false, message: 'max_datos_por_minuto debe estar entre 1 y 1200' });
     }
 
     await pool.execute(
@@ -58,6 +63,7 @@ async function updateConfig(req, res) {
          alerta_minima         = COALESCE(?, alerta_minima),
          alerta_maxima         = COALESCE(?, alerta_maxima),
          intervalo_recoleccion = COALESCE(?, intervalo_recoleccion),
+         max_datos_por_minuto  = COALESCE(?, max_datos_por_minuto),
          retencion_dias        = COALESCE(?, retencion_dias)
        WHERE user_id = ?`,
       [
@@ -66,6 +72,7 @@ async function updateConfig(req, res) {
         alerta_minima     ?? null,
         alerta_maxima     ?? null,
         intervalo_recoleccion ?? null,
+        max_datos_por_minuto ?? null,
         retencion_dias    ?? null,
         req.user.id,
       ]

@@ -6,16 +6,51 @@ let historicalChart = null;
 let donutChart = null;
 let pollingInterval = null;
 let config = {};
+const urlParams = new URLSearchParams(window.location.search);
+const forceDemoMode = urlParams.get('demo') === '1';
+const forceAuthMode = urlParams.get('auth') === '1';
+let demoMode = forceDemoMode || (!forceAuthMode && !Auth.isLoggedIn());
+let triedDemoFallback = false;
+
+function applyDemoModeUI() {
+  if (!demoMode) return;
+
+  if (!document.querySelector('.demo-badge')) {
+    const badge = document.createElement('span');
+    badge.className = 'demo-badge';
+    badge.textContent = '🧪 DEMO MODE';
+    badge.style.position = 'fixed';
+    badge.style.top = '10px';
+    badge.style.right = '10px';
+    badge.style.backgroundColor = '#ff9800';
+    badge.style.color = 'white';
+    badge.style.padding = '6px 12px';
+    badge.style.borderRadius = '20px';
+    badge.style.fontSize = '12px';
+    badge.style.fontWeight = 'bold';
+    badge.style.zIndex = '10000';
+    document.body.appendChild(badge);
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.style.display = 'none';
+
+  const cleanupBtn = document.getElementById('cleanup-btn');
+  if (cleanupBtn) cleanupBtn.style.display = 'none';
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!requireAuth()) return;
+  // In demo mode, skip auth check; otherwise require auth
+  if (!demoMode && !requireAuth()) return;
+
+  applyDemoModeUI();
 
   populateSidebarUser();
   initMobileSidebar();
   startClock(document.getElementById('current-time'));
 
-  // Load config first so we know polling interval
-  await loadConfig();
+  // Load config first so we know polling interval (skip in demo mode)
+  if (!demoMode) await loadConfig();
 
   // Init charts
   realtimeChart   = createRealtimeChart('realtime-chart');
@@ -28,14 +63,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Start polling
   startPolling();
 
-  // Logout button
-  document.getElementById('logout-btn')?.addEventListener('click', () => Auth.logout());
+  // Logout button (hide in demo mode)
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    if (demoMode) {
+      logoutBtn.style.display = 'none';
+    } else {
+      logoutBtn.addEventListener('click', () => Auth.logout());
+    }
+  }
 
   // Simulate button (demo)
-  document.getElementById('simulate-btn')?.addEventListener('click', simulateData);
-
-  // Manual cleanup
-  document.getElementById('cleanup-btn')?.addEventListener('click', manualCleanup);
+  // Manual cleanup (hide in demo)
+  const cleanupBtn = document.getElementById('cleanup-btn');
+  if (cleanupBtn && demoMode) cleanupBtn.style.display = 'none';
+  if (cleanupBtn && !demoMode) cleanupBtn.addEventListener('click', manualCleanup);
 });
 
 /* ── Config ─────────────────────────────────────────── */
@@ -46,10 +88,18 @@ async function loadConfig() {
   } catch {}
 }
 
+/* ── Helper: Use demo endpoint if in demo mode ──────── */
+function getDashboardEndpoint(endpoint) {
+  if (demoMode) {
+    return endpoint.replace('/dashboard/', '/dashboard/demo/');
+  }
+  return endpoint;
+}
+
 /* ── Latest reading ──────────────────────────────────── */
 async function loadLatest() {
   try {
-    const res = await apiFetch('/dashboard/latest');
+    const res = await apiFetch(getDashboardEndpoint('/dashboard/latest'));
     if (!res?.success) return;
     const d = res.data;
 
@@ -58,6 +108,15 @@ async function loadLatest() {
     const lastEl   = document.getElementById('last-update');
 
     if (!d) {
+      if (!demoMode && !forceAuthMode && !triedDemoFallback) {
+        // Fallback to demo if current auth user has no readings.
+        triedDemoFallback = true;
+        demoMode = true;
+        applyDemoModeUI();
+        await Promise.all([loadLatest(), loadRealtimeData(), loadHistoricalData(), loadStats(), loadAlerts()]);
+        return;
+      }
+
       if (valEl)    valEl.textContent = '—';
       if (statusEl) statusEl.innerHTML = '<span class="light-status-badge">Sin datos</span>';
       return;
@@ -82,7 +141,7 @@ async function loadLatest() {
 /* ── Real-time chart data ────────────────────────────── */
 async function loadRealtimeData() {
   try {
-    const res = await apiFetch('/dashboard/realtime?limit=20');
+    const res = await apiFetch(getDashboardEndpoint('/dashboard/realtime?limit=20'));
     if (res?.success) updateRealtimeChart(realtimeChart, res.data);
   } catch {}
 }
@@ -90,7 +149,7 @@ async function loadRealtimeData() {
 /* ── Historical chart data ───────────────────────────── */
 async function loadHistoricalData() {
   try {
-    const res = await apiFetch('/dashboard/historical?hours=24');
+    const res = await apiFetch(getDashboardEndpoint('/dashboard/historical?hours=24'));
     if (res?.success) updateHistoricalChart(historicalChart, res.data);
   } catch {}
 }
@@ -98,13 +157,13 @@ async function loadHistoricalData() {
 /* ── Stats ───────────────────────────────────────────── */
 async function loadStats() {
   try {
-    const res = await apiFetch('/dashboard/stats');
+    const res = await apiFetch(getDashboardEndpoint('/dashboard/stats'));
     if (!res?.success) return;
     const s = res.stats;
-    setText('stat-total',     s.total_readings ?? 0);
-    setText('stat-avg',       Math.round(s.avg_light ?? 0));
-    setText('stat-min',       s.min_light ?? 0);
-    setText('stat-max',       s.max_light ?? 0);
+    setText('stat-total', s.total_readings ?? 0);
+    setText('stat-avg', Math.round(s.avg_light ?? 0));
+    setText('stat-min', s.min_light ?? 0);
+    setText('stat-max', s.max_light ?? 0);
     updateDonutChart(donutChart, s);
   } catch {}
 }
@@ -112,14 +171,16 @@ async function loadStats() {
 /* ── Alerts ──────────────────────────────────────────── */
 async function loadAlerts() {
   try {
+    if (demoMode) return; // Skip alerts in demo mode
     const res = await apiFetch('/dashboard/alerts');
     if (!res?.success) return;
     renderAlerts(res.alerts);
-    // Show toast for new unread alerts
+
     const unread = res.alerts.filter(a => !a.leida).length;
-    if (unread > 0) {
-      const badge = document.getElementById('alert-badge');
-      if (badge) { badge.textContent = unread; badge.style.display = 'inline'; }
+    const badge = document.getElementById('alert-badge');
+    if (badge) {
+      badge.textContent = unread;
+      badge.style.display = unread > 0 ? 'inline' : 'none';
     }
   } catch {}
 }
@@ -167,14 +228,6 @@ function startPolling() {
   }, interval);
   // Historical refreshes less often
   setInterval(loadHistoricalData, 60_000);
-}
-
-/* ── Simulate (demo) ─────────────────────────────────── */
-async function simulateData() {
-  try {
-    const res = await apiFetch('/data/simulate', { method: 'POST', body: JSON.stringify({ count: 5 }) });
-    if (res?.success) showToast(`${res.inserted.length} lecturas simuladas`, 'success');
-  } catch (err) { showToast(err.message, 'danger'); }
 }
 
 /* ── Manual cleanup ──────────────────────────────────── */

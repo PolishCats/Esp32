@@ -12,11 +12,58 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('download-csv-btn')?.addEventListener('click', downloadCSV);
   document.getElementById('download-pdf-btn')?.addEventListener('click', downloadPDF);
   document.getElementById('send-email-form')?.addEventListener('submit', sendEmail);
+  document.getElementById('report-period')?.addEventListener('change', loadPeriodDataPreview);
+
+  loadPeriodDataPreview();
 });
 
 function getSelectedDays() {
   const el = document.getElementById('report-period');
   return el ? parseInt(el.value, 10) : 7;
+}
+
+async function loadPeriodDataPreview() {
+  const days = getSelectedDays();
+  const bodyEl = document.getElementById('period-data-body');
+  const summaryEl = document.getElementById('period-summary');
+
+  if (bodyEl) {
+    bodyEl.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Cargando datos...</td></tr>';
+  }
+
+  try {
+    const res = await apiFetch(`/reports/data?days=${days}`);
+    if (!res?.success) throw new Error(res?.message || 'No se pudieron cargar los datos');
+
+    if (summaryEl) {
+      summaryEl.textContent = `${res.total} lecturas | Promedio: ${res.stats.avg} | Min: ${res.stats.min} | Max: ${res.stats.max}`;
+    }
+
+    if (!bodyEl) return;
+    if (!res.data || res.data.length === 0) {
+      bodyEl.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Sin datos en el período seleccionado.</td></tr>';
+      return;
+    }
+
+    const rows = res.data.slice(0, 200);
+    bodyEl.innerHTML = rows.map((item, idx) => {
+      const estado = String(item.estado || '').toLowerCase();
+      const estadoClass = ['oscuro', 'medio', 'brillante'].includes(estado) ? estado : 'oscuro';
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${formatDate(item.timestamp)}</td>
+          <td>${item.light_value}</td>
+          <td><span class="light-status-badge ${estadoClass}">${estadoClass}</span></td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    if (summaryEl) summaryEl.textContent = '';
+    if (bodyEl) {
+      bodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--danger)">Error: ${err.message}</td></tr>`;
+    }
+  }
 }
 
 async function downloadCSV() {

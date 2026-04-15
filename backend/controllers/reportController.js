@@ -42,6 +42,29 @@ function computeStats(rows) {
   };
 }
 
+// ── Get period data (JSON for frontend preview) ─────────────────────────────
+async function getPeriodData(req, res) {
+  try {
+    const days = parseInt(req.query.days || '7', 10);
+    const rows = await fetchPeriodData(req.user.id, days);
+    const stats = computeStats(rows);
+
+    // Newest first for easy review in UI.
+    const ordered = [...rows].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    return res.json({
+      success: true,
+      days,
+      total: ordered.length,
+      stats,
+      data: ordered,
+    });
+  } catch (err) {
+    console.error('[reportController.getPeriodData]', err);
+    return res.status(500).json({ success: false, message: 'Error obteniendo datos del período' });
+  }
+}
+
 // ── Download CSV ──────────────────────────────────────────────────────────────
 async function downloadCSV(req, res) {
   try {
@@ -144,4 +167,4 @@ async function sendByEmail(req, res) {
   }
 }
 
-module.exports = { downloadCSV, downloadPDF, sendByEmail };
+module.exports = { downloadCSV, downloadPDF, sendByEmail, getPeriodData };

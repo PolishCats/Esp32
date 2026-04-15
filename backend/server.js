@@ -9,7 +9,7 @@ const cors         = require('cors');
 const path         = require('path');
 const rateLimit    = require('express-rate-limit');
 
-const { testConnection }   = require('./config/database');
+const { testConnection, ensureSchemaCompatibility }   = require('./config/database');
 const { scheduleCleanup }  = require('./utils/dataCleanup');
 
 const authRoutes      = require('./routes/auth');
@@ -17,9 +17,13 @@ const dashboardRoutes = require('./routes/dashboard');
 const configRoutes    = require('./routes/config');
 const reportsRoutes   = require('./routes/reports');
 const dataRoutes      = require('./routes/data');
+const devicesRoutes   = require('./routes/devices');
 
 const app  = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Codespaces/reverse proxy environments set X-Forwarded-For.
+app.set('trust proxy', 1);
 
 // ── Security middleware ───────────────────────────────────────────────────────
 app.use(helmet({
@@ -42,18 +46,34 @@ app.use(cors({
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
-  max:      200,
+  max:      parseInt(process.env.API_RATE_LIMIT_MAX || '1500', 10),
+  // Dashboard polling and device ingestion are controlled by dedicated limiters.
+  skip: (req) => req.path.startsWith('/api/dashboard') || req.path.startsWith('/api/data'),
   message:  { success: false, message: 'Demasiadas peticiones, intente más tarde.' },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max:      20,
+  max:      parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10),
   message:  { success: false, message: 'Demasiados intentos de autenticación.' },
+});
+
+const dashboardLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      parseInt(process.env.DASHBOARD_RATE_LIMIT_MAX || '5000', 10),
+  message:  { success: false, message: 'Demasiadas peticiones al dashboard, intente más tarde.' },
+});
+
+const dataLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      parseInt(process.env.DATA_RATE_LIMIT_MAX || '8000', 10),
+  message:  { success: false, message: 'Demasiadas lecturas enviadas, intente más tarde.' },
 });
 
 app.use('/api/', apiLimiter);
 app.use('/api/auth/', authLimiter);
+app.use('/api/dashboard/', dashboardLimiter);
+app.use('/api/data/', dataLimiter);
 
 // ── Body parsing ──────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -68,6 +88,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/config',    configRoutes);
 app.use('/api/reports',   reportsRoutes);
 app.use('/api/data',      dataRoutes);
+app.use('/api/devices',   devicesRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
@@ -91,6 +112,7 @@ app.use((err, _req, res, _next) => {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 (async () => {
   await testConnection();
+  await ensureSchemaCompatibility();
   scheduleCleanup();
   app.listen(PORT, () => {
     console.log(`[server] ESP32 LDR Monitor running on http://localhost:${PORT}`);
