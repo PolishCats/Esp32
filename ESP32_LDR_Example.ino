@@ -1,7 +1,7 @@
 /*
  * =====================================================================
  * ESP32 LDR Sensor to Cloud API
- * Código de Ejemplo - Envía datos de sensor LDR a la API
+ * Código de Ejemplo -- Envía datos de sensor LDR a la API
  * =====================================================================
  */
 
@@ -12,8 +12,11 @@
 // 🔧 CONFIGURACIÓN - CAMBIAR ESTOS VALORES
 const char* SSID = "TU_SSID";                           // Tu red WiFi
 const char* PASSWORD = "TU_CONTRASEÑA";                 // Contraseña WiFi
-const char* API_URL = "http://192.168.1.100:3000/api/data";  // IP del servidor
-const char* API_KEY = "tu_api_key_generada_aqui";      // Tu API Key
+const char* API_URL = "http://192.168.1.17:3000/api/data";  // IP real del servidor
+const char* API_KEY = "tu_api_key_generada_aqui";           // Tu API Key
+const char* API_HOST = "192.168.1.17";
+const uint16_t API_PORT = 3000;
+const char* API_PATH = "/api/data";
 
 // Sensor ADC
 const int LDR_PIN = 34;                                 // GPIO34 (ADC1_CH6)
@@ -23,6 +26,21 @@ const int SEND_INTERVAL_SECONDS = (int)(SEND_INTERVAL / 1000);
 // Variables
 unsigned long lastSendTime = 0;
 WiFiClient wifiClient;
+
+const char* httpErrorMessage(int code) {
+  switch (code) {
+    case -1: return "conexion rechazada o servidor inalcanzable";
+    case -2: return "send header failed";
+    case -3: return "send payload failed";
+    case -4: return "not connected";
+    case -5: return "connection lost";
+    case -6: return "no stream";
+    case -7: return "too less ram";
+    case -8: return "not connected to server";
+    case -9: return "could not parse URL";
+    default: return "error HTTP desconocido";
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -74,6 +92,7 @@ void connectToWiFi() {
     Serial.println("[✅ WiFi] Conectado!");
     Serial.print("[📍 IP] ");
     Serial.println(WiFi.localIP());
+    WiFi.setSleep(false);
   } else {
     Serial.println("[❌ WiFi] Fallo en la conexión");
   }
@@ -91,7 +110,18 @@ int readSensorAverage() {
 
 void sendToAPI(int lightValue) {
   HTTPClient http;
-  http.begin(wifiClient, API_URL);
+  wifiClient.setTimeout(10000);
+
+  bool started = http.begin(wifiClient, API_HOST, API_PORT, API_PATH);
+
+  if (!started) {
+    Serial.printf("[❌ API] No se pudo inicializar la conexión a %s\n", API_URL);
+    Serial.println("    Verifica que la IP responda desde el ESP32, que el puerto 3000 esté abierto y que no haya aislamiento entre clientes WiFi.");
+    return;
+  }
+
+  http.setTimeout(10000);
+  http.setReuse(false);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-API-Key", API_KEY);
 
@@ -106,12 +136,13 @@ void sendToAPI(int lightValue) {
   Serial.printf("[🚀 API] POST: %s\n", API_URL);
   int httpCode = http.POST(json);
   
-  if (httpCode == HTTP_CODE_OK) {
+  if (httpCode > 0) {
     String response = http.getString();
     Serial.printf("[✅ API] HTTP %d\n", httpCode);
     Serial.printf("    Response: %s\n", response.c_str());
   } else {
-    Serial.printf("[❌ API] HTTP Error %d\n", httpCode);
+    Serial.printf("[❌ API] HTTP Error %d (%s)\n", httpCode, httpErrorMessage(httpCode));
+    Serial.println("    Revisa la IP del servidor, el puerto 3000, la red WiFi y la API Key.");
   }
 
   http.end();

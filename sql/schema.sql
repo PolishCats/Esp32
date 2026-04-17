@@ -72,6 +72,23 @@ CREATE TABLE IF NOT EXISTS alertas (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------
+-- Table: device_api_keys
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_api_keys (
+  id           INT          NOT NULL AUTO_INCREMENT,
+  user_id      INT          NOT NULL,
+  device_name  VARCHAR(100) NOT NULL,
+  api_key      VARCHAR(128) NOT NULL,
+  is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+  last_used_at TIMESTAMP    NULL DEFAULT NULL,
+  created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_api_key (api_key),
+  INDEX idx_device_user (user_id),
+  CONSTRAINT fk_device_user FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------
 -- Default admin user (password: Admin1234!)
 -- Generated with bcrypt rounds=10
 -- -----------------------------------------------------
