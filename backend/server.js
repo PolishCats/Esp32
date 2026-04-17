@@ -7,6 +7,7 @@ const express      = require('express');
 const helmet       = require('helmet');
 const cors         = require('cors');
 const path         = require('path');
+const fs           = require('fs');
 const rateLimit    = require('express-rate-limit');
 
 const { testConnection, ensureSchemaCompatibility }   = require('./config/database');
@@ -21,6 +22,14 @@ const devicesRoutes   = require('./routes/devices');
 
 const app  = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
+
+const frontendPathCandidates = [
+  path.join(__dirname, '..', 'frontend'),
+  path.join(__dirname, 'frontend'),
+  '/frontend',
+];
+
+const FRONTEND_DIR = frontendPathCandidates.find((dirPath) => fs.existsSync(path.join(dirPath, 'index.html')));
 
 // Codespaces/reverse proxy environments set X-Forwarded-For.
 app.set('trust proxy', 1);
@@ -80,7 +89,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Static frontend ───────────────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+if (FRONTEND_DIR) {
+  app.use(express.static(FRONTEND_DIR));
+} else {
+  console.warn('[server] Frontend directory not found. Static files are disabled.');
+}
 
 // ── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',      authRoutes);
@@ -100,7 +113,10 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ success: false, message: 'Ruta no encontrada' });
   }
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+  if (!FRONTEND_DIR) {
+    return res.status(503).json({ success: false, message: 'Frontend no disponible en este entorno' });
+  }
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
 
 // ── Error handler ─────────────────────────────────────────────────────────────
