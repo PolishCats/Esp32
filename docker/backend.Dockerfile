@@ -11,6 +11,7 @@ COPY backend/controllers ./controllers
 COPY backend/middleware ./middleware
 COPY backend/routes ./routes
 COPY backend/utils ./utils
+COPY frontend ./frontend
 
 EXPOSE 3000
 
