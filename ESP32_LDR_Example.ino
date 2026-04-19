@@ -17,15 +17,18 @@ const char* API_KEY = "tu_api_key_generada_aqui";           // Tu API Key
 const char* API_HOST = "192.168.1.17";
 const uint16_t API_PORT = 3000;
 const char* API_PATH = "/api/data";
+const char* API_LED_PATH = "/api/data/led-state";
 
 // Sensor ADC
 const int LDR_PIN = 34;                                 // GPIO34 (ADC1_CH6)
+const int LED_PIN = 32;                                 // GPIO32 (salida digital para LED)
 const unsigned long SEND_INTERVAL = 5000;              // Intervalo en ms
 const int SEND_INTERVAL_SECONDS = (int)(SEND_INTERVAL / 1000);
 
 // Variables
 unsigned long lastSendTime = 0;
 WiFiClient wifiClient;
+bool ledCurrentState = false;
 
 const char* httpErrorMessage(int code) {
   switch (code) {
@@ -45,6 +48,8 @@ const char* httpErrorMessage(int code) {
 void setup() {
   Serial.begin(115200);
   delay(100);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
   Serial.println("\n\n╔══════════════════════════════════════╗");
   Serial.println("║  ESP32 LDR Monitor - Cloud Connect  ║");
   Serial.println("╚══════════════════════════════════════╝\n");
@@ -66,6 +71,7 @@ void loop() {
     int lightValue = readSensorAverage();
     Serial.printf("[📊 Sensor] Valor: %d\n", lightValue);
     sendToAPI(lightValue);
+    syncLedState();
   }
 
   delay(100);
@@ -143,6 +149,53 @@ void sendToAPI(int lightValue) {
   } else {
     Serial.printf("[❌ API] HTTP Error %d (%s)\n", httpCode, httpErrorMessage(httpCode));
     Serial.println("    Revisa la IP del servidor, el puerto 3000, la red WiFi y la API Key.");
+  }
+
+  http.end();
+}
+
+void syncLedState() {
+  HTTPClient http;
+  wifiClient.setTimeout(10000);
+
+  bool started = http.begin(wifiClient, API_HOST, API_PORT, API_LED_PATH);
+  if (!started) {
+    Serial.println("[⚠️ LED] No se pudo iniciar consulta de estado");
+    return;
+  }
+
+  http.setTimeout(10000);
+  http.setReuse(false);
+  http.addHeader("X-API-Key", API_KEY);
+
+  int httpCode = http.GET();
+  if (httpCode <= 0) {
+    Serial.printf("[⚠️ LED] Error HTTP %d (%s)\n", httpCode, httpErrorMessage(httpCode));
+    http.end();
+    return;
+  }
+
+  if (httpCode != 200) {
+    Serial.printf("[⚠️ LED] Respuesta inesperada HTTP %d\n", httpCode);
+    http.end();
+    return;
+  }
+
+  String response = http.getString();
+  StaticJsonDocument<256> doc;
+  DeserializationError err = deserializeJson(doc, response);
+
+  if (err) {
+    Serial.printf("[⚠️ LED] JSON inválido: %s\n", err.c_str());
+    http.end();
+    return;
+  }
+
+  bool newState = doc["is_on"] | false;
+  if (newState != ledCurrentState) {
+    ledCurrentState = newState;
+    digitalWrite(LED_PIN, ledCurrentState ? HIGH : LOW);
+    Serial.printf("[💡 LED] GPIO %d -> %s\n", LED_PIN, ledCurrentState ? "ENCENDIDO" : "APAGADO");
   }
 
   http.end();

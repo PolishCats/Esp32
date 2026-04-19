@@ -49,10 +49,13 @@ async function loadPeriodDataPreview() {
     bodyEl.innerHTML = rows.map((item, idx) => {
       const estado = String(item.estado || '').toLowerCase();
       const estadoClass = ['oscuro', 'medio', 'brillante'].includes(estado) ? estado : 'oscuro';
+      const fechaHora = item.fecha && item.hora
+        ? `${item.fecha} ${item.hora}`
+        : formatDate(item.timestamp);
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td>${formatDate(item.timestamp)}</td>
+          <td>${fechaHora}</td>
           <td>${item.light_value}</td>
           <td><span class="light-status-badge ${estadoClass}">${estadoClass}</span></td>
         </tr>

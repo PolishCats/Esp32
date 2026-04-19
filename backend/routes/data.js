@@ -14,6 +14,7 @@ const router  = express.Router();
 const { pool }              = require('../config/database');
 const { authenticateToken, authenticateDevice } = require('../middleware/auth');
 const { manualCleanup }     = require('../utils/dataCleanup');
+const { getLedStateForDevice } = require('../controllers/ledController');
 
 // In-memory sliding window per device id for throughput control.
 const deviceSendWindow = new Map();
@@ -156,5 +157,8 @@ router.delete('/cleanup', authenticateToken, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error en limpieza' });
   }
 });
+
+// ── GET /api/data/led-state (for ESP32 device polling) ───────────────────────
+router.get('/led-state', authenticateDevice, getLedStateForDevice);
 
 module.exports = router;

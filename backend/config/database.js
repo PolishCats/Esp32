@@ -45,6 +45,22 @@ async function ensureSchemaCompatibility() {
       );
     }
 
+    const [timeRows] = await pool.execute(
+      `SELECT COUNT(*) AS cnt
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'config_usuario'
+         AND COLUMN_NAME = 'hora_programada'`
+    );
+
+    if ((timeRows[0]?.cnt || 0) === 0) {
+      await pool.execute(
+        `ALTER TABLE config_usuario
+           ADD COLUMN hora_programada TIME NOT NULL DEFAULT '12:00:00'
+           COMMENT 'scheduled time'`
+      );
+    }
+
     await pool.execute(
       `CREATE TABLE IF NOT EXISTS device_api_keys (
          id           INT          NOT NULL AUTO_INCREMENT,
@@ -58,6 +74,19 @@ async function ensureSchemaCompatibility() {
          UNIQUE KEY uq_api_key (api_key),
          INDEX idx_device_user (user_id),
          CONSTRAINT fk_device_user FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
+       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+
+    await pool.execute(
+      `CREATE TABLE IF NOT EXISTS led_control_states (
+         id           INT         NOT NULL AUTO_INCREMENT,
+         user_id      INT         NOT NULL,
+         led_pin      INT         NOT NULL DEFAULT 32,
+         is_on        TINYINT(1)  NOT NULL DEFAULT 0,
+         updated_at   TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+         PRIMARY KEY (id),
+         UNIQUE KEY uq_led_user (user_id),
+         CONSTRAINT fk_led_user FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 

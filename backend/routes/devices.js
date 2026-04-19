@@ -10,6 +10,7 @@ const {
   deleteApiKey,
   toggleApiKey
 } = require('../controllers/deviceController');
+const { getLedStateForUser, setLedStateForUser } = require('../controllers/ledController');
 
 // All routes require JWT authentication
 router.use(authenticateToken);
@@ -25,5 +26,9 @@ router.delete('/keys/:id', deleteApiKey);
 
 // Toggle API Key active/inactive
 router.patch('/keys/:id/toggle', toggleApiKey);
+
+// LED control (web panel)
+router.get('/led-state', getLedStateForUser);
+router.patch('/led-state', setLedStateForUser);
 
 module.exports = router;

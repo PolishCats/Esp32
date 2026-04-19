@@ -36,6 +36,7 @@ async function loadConfig() {
     setVal('alerta_maxima',         c.alerta_maxima);
     setVal('retencion_dias',        c.retencion_dias);
     setVal('max_datos_por_minuto',  c.max_datos_por_minuto);
+    setTimeVal('hora_programada',   c.hora_programada);
 
     // Update range display values
     document.querySelectorAll('input[type="range"]').forEach(input => {
@@ -59,6 +60,7 @@ async function saveConfig(e) {
     alerta_maxima:         getNumVal('alerta_maxima'),
     retencion_dias:        getNumVal('retencion_dias'),
     max_datos_por_minuto:  getNumVal('max_datos_por_minuto'),
+    hora_programada:       getTimeVal('hora_programada'),
   };
 
   // Validate ordering
@@ -87,6 +89,11 @@ async function saveConfig(e) {
 function setVal(id, value) {
   const el = document.getElementById(id);
   if (el) el.value = value ?? '';
+}
+
+function setTimeVal(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value ? String(value).slice(0, 5) : '12:00';
 }
 
 async function loadDeviceKeys() {
@@ -224,4 +231,9 @@ window.generateDeviceKey = generateDeviceKey;
 function getNumVal(id) {
   const el = document.getElementById(id);
   return el ? parseInt(el.value, 10) : undefined;
+}
+
+function getTimeVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : undefined;
 }

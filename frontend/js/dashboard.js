@@ -15,23 +15,6 @@ let triedDemoFallback = false;
 function applyDemoModeUI() {
   if (!demoMode) return;
 
-  if (!document.querySelector('.demo-badge')) {
-    const badge = document.createElement('span');
-    badge.className = 'demo-badge';
-    badge.textContent = '🧪 DEMO MODE';
-    badge.style.position = 'fixed';
-    badge.style.top = '10px';
-    badge.style.right = '10px';
-    badge.style.backgroundColor = '#ff9800';
-    badge.style.color = 'white';
-    badge.style.padding = '6px 12px';
-    badge.style.borderRadius = '20px';
-    badge.style.fontSize = '12px';
-    badge.style.fontWeight = 'bold';
-    badge.style.zIndex = '10000';
-    document.body.appendChild(badge);
-  }
-
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.style.display = 'none';
 

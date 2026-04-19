@@ -5,6 +5,26 @@ const { pool }       = require('../config/database');
 const { sendReport } = require('../utils/emailSender');
 const PDFDocument    = require('pdfkit');
 
+const REPORT_TIMEZONE = 'America/Mexico_City';
+
+function formatDateTimeParts(ts) {
+  const dateObj = new Date(ts);
+  const date = dateObj.toLocaleDateString('es-MX', {
+    timeZone: REPORT_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const time = dateObj.toLocaleTimeString('es-MX', {
+    timeZone: REPORT_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  return { date, time };
+}
+
 // ── Helper: fetch period data ─────────────────────────────────────────────────
 async function fetchPeriodData(userId, days) {
   const [rows] = await pool.execute(
@@ -52,12 +72,21 @@ async function getPeriodData(req, res) {
     // Newest first for easy review in UI.
     const ordered = [...rows].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+    const formatted = ordered.map((row) => {
+      const parts = formatDateTimeParts(row.timestamp);
+      return {
+        ...row,
+        fecha: parts.date,
+        hora: parts.time,
+      };
+    });
+
     return res.json({
       success: true,
       days,
-      total: ordered.length,
+      total: formatted.length,
       stats,
-      data: ordered,
+      data: formatted,
     });
   } catch (err) {
     console.error('[reportController.getPeriodData]', err);
@@ -71,10 +100,11 @@ async function downloadCSV(req, res) {
     const days = parseInt(req.query.days || '7', 10);
     const rows = await fetchPeriodData(req.user.id, days);
 
-    const header = 'timestamp,light_value,estado\n';
-    const body   = rows.map(r =>
-      `${new Date(r.timestamp).toISOString()},${r.light_value},${r.estado}`
-    ).join('\n');
+    const header = 'fecha,hora,light_value,estado\n';
+    const body   = rows.map(r => {
+      const parts = formatDateTimeParts(r.timestamp);
+      return `${parts.date},${parts.time},${r.light_value},${r.estado}`;
+    }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="sensor_data_${days}d.csv"`);
@@ -103,9 +133,10 @@ async function downloadPDF(req, res) {
     doc.fontSize(22).font('Helvetica-Bold')
        .text('Reporte de Sensor LDR - ESP32', { align: 'center' });
     doc.moveDown(0.5);
-    doc.fontSize(12).font('Helvetica')
+     const generated = formatDateTimeParts(new Date());
+     doc.fontSize(12).font('Helvetica')
        .text(`Período: últimos ${days} días`, { align: 'center' });
-    doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, { align: 'center' });
+     doc.text(`Generado: ${generated.date} ${generated.time}`, { align: 'center' });
     doc.moveDown(1);
 
     // Stats table
@@ -135,10 +166,15 @@ async function downloadPDF(req, res) {
     doc.fontSize(16).font('Helvetica-Bold').text('Últimas Lecturas (máx. 50)');
     doc.moveDown(0.4);
     doc.fontSize(10).font('Helvetica');
+    doc.text('Fecha       Hora       Valor Luz   Estado');
+    doc.moveDown(0.2);
     const sample = rows.slice(-50);
     sample.forEach(r => {
-      const ts = new Date(r.timestamp).toLocaleString('es-MX');
-      doc.text(`${ts}  |  Luz: ${r.light_value}  |  Estado: ${r.estado}`);
+      const parts = formatDateTimeParts(r.timestamp);
+      const fecha = parts.date.padEnd(12, ' ');
+      const hora = parts.time.padEnd(10, ' ');
+      const valor = String(r.light_value).padEnd(10, ' ');
+      doc.text(`${fecha}${hora}${valor}${r.estado}`);
     });
 
     doc.end();

@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS config_usuario (
   alerta_maxima         INT  NOT NULL DEFAULT 3800,
   intervalo_recoleccion INT  NOT NULL DEFAULT 5  COMMENT 'seconds',
   max_datos_por_minuto  INT  NOT NULL DEFAULT 60 COMMENT 'max readings per minute per device',
+  hora_programada       TIME NOT NULL DEFAULT '12:00:00' COMMENT 'scheduled time',
   retencion_dias        INT  NOT NULL DEFAULT 30 COMMENT 'days to keep data',
   PRIMARY KEY (id),
   UNIQUE KEY uq_config_user (user_id),
@@ -89,6 +90,20 @@ CREATE TABLE IF NOT EXISTS device_api_keys (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------
+-- Table: led_control_states
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS led_control_states (
+  id          INT         NOT NULL AUTO_INCREMENT,
+  user_id     INT         NOT NULL,
+  led_pin     INT         NOT NULL DEFAULT 32,
+  is_on       TINYINT(1)  NOT NULL DEFAULT 0,
+  updated_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_led_user (user_id),
+  CONSTRAINT fk_led_user FOREIGN KEY (user_id) REFERENCES usuarios (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------
 -- Default admin user (password: Admin1234!)
 -- Generated with bcrypt rounds=10
 -- -----------------------------------------------------
@@ -100,6 +115,6 @@ VALUES (
 );
 
 -- Default config for admin
-INSERT IGNORE INTO config_usuario (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto)
-SELECT id, 1000, 3000, 200, 3800, 5, 60
+INSERT IGNORE INTO config_usuario (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto, hora_programada)
+SELECT id, 1000, 3000, 200, 3800, 5, 60, '12:00:00'
 FROM usuarios WHERE username = 'admin';
