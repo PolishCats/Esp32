@@ -151,7 +151,7 @@ docker compose down
 Notas de limpieza:
 - `DELETE /api/data/cleanup` acepta body opcional:
   - `days` (int)
-  - `clearAllAlerts` (bool)
+  - `clearAllAlerts` (bool) 
 
 ### Dashboard
 
