@@ -49,7 +49,8 @@ async function runCleanup() {
  * Manual cleanup triggered by admin via API.
  * Accepts optional `days` override.
  */
-async function manualCleanup(userId, days) {
+async function manualCleanup(userId, options = {}) {
+  const { days, clearAllAlerts = false } = options;
   const retentionDays = days || parseInt(process.env.DATA_RETENTION_DAYS || '30', 10);
 
   const [sResult] = await pool.execute(
@@ -58,16 +59,26 @@ async function manualCleanup(userId, days) {
        AND timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)`,
     [userId, retentionDays]
   );
-  const [aResult] = await pool.execute(
-    `DELETE FROM alertas
-     WHERE user_id = ?
-       AND timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)`,
-    [userId, retentionDays]
-  );
+  let aResult;
+  if (clearAllAlerts) {
+    [aResult] = await pool.execute(
+      `DELETE FROM alertas
+       WHERE user_id = ?`,
+      [userId]
+    );
+  } else {
+    [aResult] = await pool.execute(
+      `DELETE FROM alertas
+       WHERE user_id = ?
+         AND timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)`,
+      [userId, retentionDays]
+    );
+  }
 
   return {
     sensorDeleted: sResult.affectedRows,
     alertasDeleted: aResult.affectedRows,
+    clearAllAlerts,
   };
 }
 

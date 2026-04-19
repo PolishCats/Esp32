@@ -161,13 +161,40 @@
         <!-- Time settings -->
         <div class="card" style="margin-bottom:1.2rem">
           <div class="card-header">
-            <span class="card-title">⏰ Hora Programada</span>
+            <span class="card-title">⏰ Hora y Zona Horaria</span>
           </div>
           <div class="card-body">
-            <div class="form-group" style="max-width:320px">
-              <label for="hora_programada">Hora</label>
-              <input type="time" id="hora_programada" name="hora_programada" class="form-control" value="12:00">
-              <p class="form-hint">Define la hora que quieres guardar en la configuración del sistema.</p>
+            <div class="config-grid">
+              <div class="form-group">
+                <label for="hora_modo">Modo de hora</label>
+                <select id="hora_modo" name="hora_modo" class="form-control">
+                  <option value="auto">Automática (hora del servidor)</option>
+                  <option value="manual">Manual</option>
+                </select>
+                <p class="form-hint">Automática usa la hora del servidor con la zona horaria elegida.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="zona_horaria">Zona horaria</label>
+                <select id="zona_horaria" name="zona_horaria" class="form-control">
+                  <option value="America/Mexico_City">America/Mexico_City</option>
+                  <option value="America/Bogota">America/Bogota</option>
+                  <option value="America/Lima">America/Lima</option>
+                  <option value="America/Guatemala">America/Guatemala</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles</option>
+                  <option value="UTC">UTC</option>
+                </select>
+                <p class="form-hint">Se usa para mostrar fechas y horas en reportes.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="formato_hora">Formato de hora</label>
+                <select id="formato_hora" name="formato_hora" class="form-control">
+                  <option value="24">24 horas</option>
+                  <option value="12">12 horas</option>
+                </select>
+                <p class="form-hint">Afecta la visualización en reportes y exportaciones.</p>
+              </div>
             </div>
           </div>
         </div>

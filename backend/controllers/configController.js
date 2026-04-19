@@ -3,6 +3,12 @@
 
 const { pool } = require('../config/database');
 
+const DEFAULT_TIME_CONFIG = {
+  hora_modo: 'auto',
+  zona_horaria: 'America/Mexico_City',
+  formato_hora: '24',
+};
+
 // ── Get config ────────────────────────────────────────────────────────────────
 async function getConfig(req, res) {
   try {
@@ -14,8 +20,8 @@ async function getConfig(req, res) {
       // create defaults
       await pool.execute(
         `INSERT IGNORE INTO config_usuario
-           (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto, hora_programada)
-         VALUES (?, 1000, 3000, 200, 3800, 5, 60, '12:00:00')`,
+           (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto, hora_modo, zona_horaria, formato_hora)
+         VALUES (?, 1000, 3000, 200, 3800, 5, 60, 'auto', 'America/Mexico_City', '24')`,
         [req.user.id]
       );
       const [newRows] = await pool.execute(
@@ -24,7 +30,7 @@ async function getConfig(req, res) {
       );
       return res.json({ success: true, config: newRows[0] });
     }
-    return res.json({ success: true, config: rows[0] });
+    return res.json({ success: true, config: { ...DEFAULT_TIME_CONFIG, ...rows[0] } });
   } catch (err) {
     console.error('[configController.getConfig]', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
@@ -42,7 +48,9 @@ async function updateConfig(req, res) {
       intervalo_recoleccion,
       max_datos_por_minuto,
       retencion_dias,
-      hora_programada,
+      hora_modo,
+      zona_horaria,
+      formato_hora,
     } = req.body;
 
     // Basic validation
@@ -53,8 +61,16 @@ async function updateConfig(req, res) {
       }
     }
 
-    if (hora_programada !== undefined && !/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(String(hora_programada))) {
-      return res.status(400).json({ success: false, message: 'hora_programada debe tener formato HH:MM' });
+    if (hora_modo !== undefined && !['auto', 'manual'].includes(String(hora_modo))) {
+      return res.status(400).json({ success: false, message: 'hora_modo debe ser auto o manual' });
+    }
+
+    if (zona_horaria !== undefined && String(zona_horaria).trim().length < 3) {
+      return res.status(400).json({ success: false, message: 'zona_horaria inválida' });
+    }
+
+    if (formato_hora !== undefined && !['12', '24'].includes(String(formato_hora))) {
+      return res.status(400).json({ success: false, message: 'formato_hora debe ser 12 o 24' });
     }
 
     if (max_datos_por_minuto !== undefined && (max_datos_por_minuto < 1 || max_datos_por_minuto > 1200)) {
@@ -70,7 +86,9 @@ async function updateConfig(req, res) {
          intervalo_recoleccion = COALESCE(?, intervalo_recoleccion),
          max_datos_por_minuto  = COALESCE(?, max_datos_por_minuto),
          retencion_dias        = COALESCE(?, retencion_dias),
-         hora_programada       = COALESCE(?, hora_programada)
+         hora_modo             = COALESCE(?, hora_modo),
+         zona_horaria          = COALESCE(?, zona_horaria),
+         formato_hora          = COALESCE(?, formato_hora)
        WHERE user_id = ?`,
       [
         rango_oscuro_max  ?? null,
@@ -80,7 +98,9 @@ async function updateConfig(req, res) {
         intervalo_recoleccion ?? null,
         max_datos_por_minuto ?? null,
         retencion_dias    ?? null,
-        hora_programada   ?? null,
+        hora_modo         ?? null,
+        zona_horaria      ?? null,
+        formato_hora      ?? null,
         req.user.id,
       ]
     );
@@ -89,7 +109,7 @@ async function updateConfig(req, res) {
       'SELECT * FROM config_usuario WHERE user_id = ?',
       [req.user.id]
     );
-    return res.json({ success: true, config: rows[0] });
+    return res.json({ success: true, config: { ...DEFAULT_TIME_CONFIG, ...rows[0] } });
   } catch (err) {
     console.error('[configController.updateConfig]', err);
     return res.status(500).json({ success: false, message: 'Error interno' });

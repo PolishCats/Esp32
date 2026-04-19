@@ -49,7 +49,9 @@ CREATE TABLE IF NOT EXISTS config_usuario (
   alerta_maxima         INT  NOT NULL DEFAULT 3800,
   intervalo_recoleccion INT  NOT NULL DEFAULT 5  COMMENT 'seconds',
   max_datos_por_minuto  INT  NOT NULL DEFAULT 60 COMMENT 'max readings per minute per device',
-  hora_programada       TIME NOT NULL DEFAULT '12:00:00' COMMENT 'scheduled time',
+  hora_modo             VARCHAR(10) NOT NULL DEFAULT 'auto' COMMENT 'auto | manual',
+  zona_horaria          VARCHAR(64) NOT NULL DEFAULT 'America/Mexico_City' COMMENT 'IANA timezone',
+  formato_hora          VARCHAR(2) NOT NULL DEFAULT '24' COMMENT '12 | 24',
   retencion_dias        INT  NOT NULL DEFAULT 30 COMMENT 'days to keep data',
   PRIMARY KEY (id),
   UNIQUE KEY uq_config_user (user_id),
@@ -115,6 +117,6 @@ VALUES (
 );
 
 -- Default config for admin
-INSERT IGNORE INTO config_usuario (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto, hora_programada)
-SELECT id, 1000, 3000, 200, 3800, 5, 60, '12:00:00'
+INSERT IGNORE INTO config_usuario (user_id, rango_oscuro_max, rango_medio_max, alerta_minima, alerta_maxima, intervalo_recoleccion, max_datos_por_minuto, hora_modo, zona_horaria, formato_hora)
+SELECT id, 1000, 3000, 200, 3800, 5, 60, 'auto', 'America/Mexico_City', '24'
 FROM usuarios WHERE username = 'admin';

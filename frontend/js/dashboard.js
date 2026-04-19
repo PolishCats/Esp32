@@ -6,34 +6,16 @@ let historicalChart = null;
 let donutChart = null;
 let pollingInterval = null;
 let config = {};
-const urlParams = new URLSearchParams(window.location.search);
-const forceDemoMode = urlParams.get('demo') === '1';
-const forceAuthMode = urlParams.get('auth') === '1';
-let demoMode = forceDemoMode || (!forceAuthMode && !Auth.isLoggedIn());
-let triedDemoFallback = false;
-
-function applyDemoModeUI() {
-  if (!demoMode) return;
-
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) logoutBtn.style.display = 'none';
-
-  const cleanupBtn = document.getElementById('cleanup-btn');
-  if (cleanupBtn) cleanupBtn.style.display = 'none';
-}
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // In demo mode, skip auth check; otherwise require auth
-  if (!demoMode && !requireAuth()) return;
-
-  applyDemoModeUI();
+  if (!requireAuth()) return;
 
   populateSidebarUser();
   initMobileSidebar();
   startClock(document.getElementById('current-time'));
 
-  // Load config first so we know polling interval (skip in demo mode)
-  if (!demoMode) await loadConfig();
+  // Load config first so we know polling interval
+  await loadConfig();
 
   // Init charts
   realtimeChart   = createRealtimeChart('realtime-chart');
@@ -46,21 +28,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Start polling
   startPolling();
 
-  // Logout button (hide in demo mode)
+  // Logout button
   const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    if (demoMode) {
-      logoutBtn.style.display = 'none';
-    } else {
-      logoutBtn.addEventListener('click', () => Auth.logout());
-    }
-  }
+  if (logoutBtn) logoutBtn.addEventListener('click', () => Auth.logout());
 
-  // Simulate button (demo)
-  // Manual cleanup (hide in demo)
+  // Manual cleanup
   const cleanupBtn = document.getElementById('cleanup-btn');
-  if (cleanupBtn && demoMode) cleanupBtn.style.display = 'none';
-  if (cleanupBtn && !demoMode) cleanupBtn.addEventListener('click', manualCleanup);
+  if (cleanupBtn) cleanupBtn.addEventListener('click', manualCleanup);
 });
 
 /* ── Config ─────────────────────────────────────────── */
@@ -71,18 +45,10 @@ async function loadConfig() {
   } catch {}
 }
 
-/* ── Helper: Use demo endpoint if in demo mode ──────── */
-function getDashboardEndpoint(endpoint) {
-  if (demoMode) {
-    return endpoint.replace('/dashboard/', '/dashboard/demo/');
-  }
-  return endpoint;
-}
-
 /* ── Latest reading ──────────────────────────────────── */
 async function loadLatest() {
   try {
-    const res = await apiFetch(getDashboardEndpoint('/dashboard/latest'));
+    const res = await apiFetch('/dashboard/latest');
     if (!res?.success) return;
     const d = res.data;
 
@@ -91,15 +57,6 @@ async function loadLatest() {
     const lastEl   = document.getElementById('last-update');
 
     if (!d) {
-      if (!demoMode && !forceAuthMode && !triedDemoFallback) {
-        // Fallback to demo if current auth user has no readings.
-        triedDemoFallback = true;
-        demoMode = true;
-        applyDemoModeUI();
-        await Promise.all([loadLatest(), loadRealtimeData(), loadHistoricalData(), loadStats(), loadAlerts()]);
-        return;
-      }
-
       if (valEl)    valEl.textContent = '—';
       if (statusEl) statusEl.innerHTML = '<span class="light-status-badge">Sin datos</span>';
       return;
@@ -124,7 +81,7 @@ async function loadLatest() {
 /* ── Real-time chart data ────────────────────────────── */
 async function loadRealtimeData() {
   try {
-    const res = await apiFetch(getDashboardEndpoint('/dashboard/realtime?limit=20'));
+    const res = await apiFetch('/dashboard/realtime?limit=20');
     if (res?.success) updateRealtimeChart(realtimeChart, res.data);
   } catch {}
 }
@@ -132,7 +89,7 @@ async function loadRealtimeData() {
 /* ── Historical chart data ───────────────────────────── */
 async function loadHistoricalData() {
   try {
-    const res = await apiFetch(getDashboardEndpoint('/dashboard/historical?hours=24'));
+    const res = await apiFetch('/dashboard/historical?hours=24');
     if (res?.success) updateHistoricalChart(historicalChart, res.data);
   } catch {}
 }
@@ -140,7 +97,7 @@ async function loadHistoricalData() {
 /* ── Stats ───────────────────────────────────────────── */
 async function loadStats() {
   try {
-    const res = await apiFetch(getDashboardEndpoint('/dashboard/stats'));
+    const res = await apiFetch('/dashboard/stats');
     if (!res?.success) return;
     const s = res.stats;
     setText('stat-total', s.total_readings ?? 0);
@@ -154,7 +111,6 @@ async function loadStats() {
 /* ── Alerts ──────────────────────────────────────────── */
 async function loadAlerts() {
   try {
-    if (demoMode) return; // Skip alerts in demo mode
     const res = await apiFetch('/dashboard/alerts');
     if (!res?.success) return;
     renderAlerts(res.alerts);
@@ -215,10 +171,16 @@ function startPolling() {
 
 /* ── Manual cleanup ──────────────────────────────────── */
 async function manualCleanup() {
-  if (!confirm('¿Eliminar datos antiguos? Esta acción no se puede deshacer.')) return;
+  if (!confirm('¿Limpiar alertas del panel y datos antiguos? Esta acción no se puede deshacer.')) return;
   try {
-    const res = await apiFetch('/data/cleanup', { method: 'DELETE', body: JSON.stringify({}) });
-    if (res?.success) showToast(`Limpieza: ${res.sensorDeleted} lecturas, ${res.alertasDeleted} alertas eliminadas`, 'info');
+    const res = await apiFetch('/data/cleanup', {
+      method: 'DELETE',
+      body: JSON.stringify({ clearAllAlerts: true }),
+    });
+    if (res?.success) {
+      showToast(`Limpieza: ${res.sensorDeleted} lecturas antiguas, ${res.alertasDeleted} alertas eliminadas`, 'info');
+      await loadAlerts();
+    }
   } catch (err) { showToast(err.message, 'danger'); }
 }
 

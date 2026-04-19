@@ -1,189 +1,211 @@
-# ESP32 LDR Monitor – Web Application
+# ESP32 LDR Monitor
 
-A complete, modern web application to monitor LDR (Light Dependent Resistor) sensor data from an ESP32 microcontroller.
+Aplicacion web completa para monitorear lecturas de un sensor LDR conectado a ESP32, con autenticacion obligatoria, reportes y control de LED remoto.
 
-## Features
+## Caracteristicas
 
-- **Authentication** – Secure login/register with JWT and bcrypt password hashing
-- **Real-time Dashboard** – Live chart updated every few seconds with sensor readings
-- **Historical Chart** – 24-hour history visualization
-- **Alert System** – Configurable light thresholds with visual notifications
-- **Configuration Panel** – Adjustable light ranges and alert thresholds per user
-- **Reports** – Export data as CSV or PDF, send reports via email
-- **Data Cleanup** – Automatic deletion of data older than configurable retention period
-- **ESP32 Status** – Connected/Disconnected indicator based on last reading timestamp
-- **Credits Page** – Project info, technology stack, hardware details, API reference
+- Autenticacion con JWT (registro/login)
+- Dashboard en tiempo real con estado del ESP32
+- Historico de lecturas y estadisticas
+- Alertas por umbrales minimos/maximos
+- Configuracion por usuario (rangos, limites, retencion)
+- Configuracion de hora:
+  - Modo automatico (hora del servidor)
+  - Modo manual (zona horaria elegida)
+  - Formato de hora 12/24
+- Reportes CSV/PDF con fecha y hora separadas
+- Envio de reportes por correo
+- Limpieza manual de datos y alertas
+- Limpieza automatica por retencion
+- Control LED remoto (GPIO 32 en ESP32)
+- Gestion de API Keys para dispositivos IoT
 
-## Tech Stack
+## Stack
 
-| Layer      | Technology |
-|------------|-----------|
-| Backend    | Node.js + Express.js |
-| Database   | MySQL |
-| Auth       | JWT + bcrypt |
-| Frontend   | HTML5, CSS3, Vanilla JavaScript |
-| Charts     | Chart.js |
-| Email      | Nodemailer |
-| PDF        | PDFKit |
-| Security   | Helmet, express-rate-limit |
+- Backend: Node.js + Express
+- Base de datos: MySQL
+- Frontend: HTML, CSS, JavaScript (vanilla)
+- Graficos: Chart.js
+- PDF: PDFKit
+- Correo: Nodemailer
+- Seguridad: Helmet, rate limiting, JWT, bcrypt
 
-## Project Structure
+## Estructura
 
-```
+```text
 .
 ├── backend/
-│   ├── server.js              # Main Express server
-│   ├── package.json
-│   ├── config/
-│   │   └── database.js        # MySQL connection pool
-│   ├── middleware/
-│   │   └── auth.js            # JWT authentication middleware
+│   ├── server.js
+│   ├── config/database.js
 │   ├── controllers/
 │   │   ├── authController.js
-│   │   ├── dashboardController.js
 │   │   ├── configController.js
+│   │   ├── dashboardController.js
+│   │   ├── deviceController.js
+│   │   ├── ledController.js
 │   │   └── reportController.js
+│   ├── middleware/auth.js
 │   ├── routes/
 │   │   ├── auth.js
-│   │   ├── dashboard.js
 │   │   ├── config.js
-│   │   ├── reports.js
-│   │   └── data.js            # ESP32 data ingestion + simulate
+│   │   ├── dashboard.js
+│   │   ├── data.js
+│   │   ├── devices.js
+│   │   └── reports.js
 │   └── utils/
-│       ├── emailSender.js
-│       └── dataCleanup.js     # Automatic & manual data cleanup
+│       ├── dataCleanup.js
+│       └── emailSender.js
 ├── frontend/
-│   ├── index.html             # Login page
+│   ├── index.html
 │   ├── register.html
 │   ├── dashboard.html
 │   ├── config.html
+│   ├── led.html
 │   ├── reports.html
 │   ├── credits.html
 │   ├── css/
-│   │   ├── style.css          # Global / Auth styles
-│   │   ├── dashboard.css      # Dashboard-specific styles
-│   │   └── responsive.css     # Mobile breakpoints
 │   └── js/
-│       ├── main.js            # Shared utilities (Auth, API, Toast)
-│       ├── auth.js            # Login/Register logic
-│       ├── dashboard.js       # Dashboard polling and rendering
-│       ├── charts.js          # Chart.js helpers
-│       ├── config.js          # Configuration page
-│       └── reports.js         # Reports download/email
-├── sql/
-│   └── schema.sql             # Full database schema
-├── .env.example               # Environment variable template
-└── README.md
+├── sql/schema.sql
+├── ESP32_LDR_Example.ino
+└── test_api.sh
 ```
 
-## Quick Start
+## Inicio rapido
 
-### Prerequisites
-
-- Node.js ≥ 18
-- MySQL 5.7 / 8.x
-- npm
-
-### 1. Database Setup
+### 1) Base de datos
 
 ```bash
 mysql -u root -p < sql/schema.sql
 ```
 
-### 2. Environment Configuration
+### 2) Variables de entorno
 
 ```bash
 cp .env.example backend/.env
-# Edit backend/.env with your MySQL credentials and SMTP settings
 ```
 
-### 3. Install Dependencies & Run
+Configura credenciales DB/SMTP en `backend/.env`.
+
+### 3) Ejecutar backend
 
 ```bash
 cd backend
 npm install
 npm start
-# Development: npm run dev (uses nodemon)
 ```
 
-### 4. Access the Application
+### 4) Abrir app
 
-Open [http://localhost:3000](http://localhost:3000)
+- URL: http://localhost:3000
+- Usuario por defecto:
+  - username: `admin`
+  - password: `Admin1234!`
 
-Default admin credentials:
-- **Username:** `admin`
-- **Password:** `Admin1234!` *(change immediately!)*
+## Despliegue con Docker
 
-## ESP32 Integration
+Tambien puedes desplegar todo el stack (MySQL + App) con Docker Compose.
 
-Send sensor data from the ESP32 using a simple HTTP POST:
-
-```cpp
-// Arduino/ESP32 sketch snippet
-#include <WiFi.h>
-#include <HTTPClient.h>
-
-const char* serverUrl = "http://YOUR_SERVER_IP:3000/api/data";
-const char* jwtToken  = "YOUR_JWT_TOKEN"; // obtained from /api/auth/login
-
-void sendLDRData(int lightValue) {
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", String("Bearer ") + jwtToken);
-
-  String body = "{\"light_value\":" + String(lightValue) + "}";
-  int code = http.POST(body);
-  http.end();
-}
-
-void loop() {
-  int rawValue = analogRead(34); // GPIO34 – ADC pin
-  sendLDRData(rawValue);
-  delay(5000); // Send every 5 seconds
-}
+```bash
+cd docker
+docker compose up -d --build
 ```
 
-## API Reference
+Servicios levantados:
+- App: `http://localhost:3000`
+- MySQL: `localhost:3306`
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Register new user |
-| POST | `/api/auth/login` | No | Login, get JWT |
-| GET  | `/api/auth/me` | JWT | Current user info |
-| POST | `/api/data` | JWT | Submit sensor reading |
-| POST | `/api/data/simulate` | JWT | Generate random readings (demo) |
-| DELETE | `/api/data/cleanup` | JWT | Manual data cleanup |
-| GET  | `/api/dashboard/latest` | JWT | Latest reading |
-| GET  | `/api/dashboard/realtime` | JWT | Last N readings |
-| GET  | `/api/dashboard/historical` | JWT | Last 24h data |
-| GET  | `/api/dashboard/stats` | JWT | 24h statistics |
-| GET  | `/api/dashboard/alerts` | JWT | Alert list |
-| PATCH | `/api/dashboard/alerts/:id/read` | JWT | Mark alert as read |
-| GET  | `/api/config` | JWT | Get user config |
-| PUT  | `/api/config` | JWT | Update user config |
-| GET  | `/api/reports/csv?days=N` | JWT | Download CSV |
-| GET  | `/api/reports/pdf?days=N` | JWT | Download PDF |
-| POST | `/api/reports/send-email` | JWT | Email report |
+Comandos utiles:
 
-## Light States
+```bash
+# Ver estado de contenedores
+docker compose ps
 
-| Estado    | Range (ADC) | Description |
-|-----------|-------------|-------------|
-| 🌑 Oscuro  | 0 – 1000   | Very low light |
-| 🌤️ Medio   | 1001 – 3000 | Medium light |
-| ☀️ Brillante | 3001 – 4095 | Bright light |
+# Ver logs
+docker compose logs -f app
 
-*Ranges are configurable per user in the Configuration page.*
+# Rebuild rapido solo de la app
+docker compose up -d --build app
 
-## Security
+# Detener todo
+docker compose down
+```
 
-- Passwords hashed with bcrypt (10 rounds)
-- JWT authentication with configurable expiry
-- Rate limiting on auth endpoints (20 req/15 min) and API (200 req/15 min)
-- Helmet.js security headers
-- Input validation on both client and server side
+## API principal
 
-## License
+### Auth
 
-MIT
+| Metodo | Ruta | Auth | Descripcion |
+|---|---|---|---|
+| POST | /api/auth/register | No | Registrar usuario |
+| POST | /api/auth/login | No | Login |
+| GET | /api/auth/me | JWT | Usuario actual |
+
+### Ingestion de datos (ESP32)
+
+| Metodo | Ruta | Auth | Descripcion |
+|---|---|---|---|
+| POST | /api/data | JWT o API Key | Guardar lectura del sensor |
+| POST | /api/data/simulate | JWT | Generar lecturas aleatorias |
+| DELETE | /api/data/cleanup | JWT | Limpieza manual |
+| GET | /api/data/led-state | JWT o API Key | Leer estado LED para ESP32 |
+
+Notas de limpieza:
+- `DELETE /api/data/cleanup` acepta body opcional:
+  - `days` (int)
+  - `clearAllAlerts` (bool)
+
+### Dashboard
+
+| Metodo | Ruta | Auth | Descripcion |
+|---|---|---|---|
+| GET | /api/dashboard/latest | JWT | Ultima lectura |
+| GET | /api/dashboard/realtime | JWT | Ultimas N lecturas |
+| GET | /api/dashboard/historical | JWT | Historico |
+| GET | /api/dashboard/stats | JWT | Estadisticas |
+| GET | /api/dashboard/alerts | JWT | Alertas |
+| PATCH | /api/dashboard/alerts/:id/read | JWT | Marcar alerta leida |
+
+### Configuracion
+
+| Metodo | Ruta | Auth | Descripcion |
+|---|---|---|---|
+| GET | /api/config | JWT | Obtener configuracion |
+| PUT | /api/config | JWT | Actualizar configuracion |
+
+Campos de hora soportados en configuracion:
+- `hora_modo`: `auto` o `manual`
+- `zona_horaria`: string IANA (ej. `America/Mexico_City`)
+- `formato_hora`: `12` o `24`
+
+### Dispositivos / LED
+
+| Metodo | Ruta | Auth | Descripcion |
+|---|---|---|---|
+| POST | /api/devices/keys | JWT | Crear API Key |
+| GET | /api/devices/keys | JWT | Listar API Keys |
+| DELETE | /api/devices/keys/:id | JWT | Eliminar API Key |
+| PATCH | /api/devices/keys/:id/toggle | JWT | Activar/Desactivar API Key |
+| GET | /api/devices/led-state | JWT | Estado LED para panel web |
+| PATCH | /api/devices/led-state | JWT | Encender/Apagar LED |
+
+### Reportes
+
+| Metodo | Ruta | Auth | Descripcion |
+|---|---|---|---|
+| GET | /api/reports/data?days=N | JWT | Datos del periodo |
+| GET | /api/reports/csv?days=N | JWT | Descargar CSV |
+| GET | /api/reports/pdf?days=N | JWT | Descargar PDF |
+| POST | /api/reports/send-email | JWT | Enviar reporte por correo |
+
+## Integracion ESP32
+
+- Sensor LDR: GPIO34 (ADC)
+- LED remoto: GPIO32
+- Ejemplo completo: `ESP32_LDR_Example.ino`
+
+Flujo tipico:
+1. Crear API Key en la web.
+2. Configurar API Key en el firmware.
+3. Enviar lecturas a `/api/data`.
+4. Consultar estado LED en `/api/data/led-state` y aplicar en GPIO32.
+

@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <script>
+    if (!localStorage.getItem('ldr_token')) {
+      window.location.replace('/index.html');
+    }
+  </script>
 </head>
 <body>
 <div class="app-layout">

@@ -5,17 +5,8 @@ const express = require('express');
 const router  = express.Router();
 const {
   getLatest, getRealtimeData, getHistoricalData, getStats, getAlerts, markAlertRead,
-  getLatestDemo, getRealtimeDemoData, getHistoricalDemoData, getStatsDemoData,
 } = require('../controllers/dashboardController');
 const { authenticateToken } = require('../middleware/auth');
-
-// ══════════════════════════════════════════════════════════════════════════════
-// DEMO ROUTES (No authentication required - shows admin user data for testing)
-// ══════════════════════════════════════════════════════════════════════════════
-router.get('/demo/latest',     getLatestDemo);
-router.get('/demo/realtime',   getRealtimeDemoData);
-router.get('/demo/historical', getHistoricalDemoData);
-router.get('/demo/stats',      getStatsDemoData);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // AUTHENTICATED ROUTES (Requires JWT token)

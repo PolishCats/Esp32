@@ -25,8 +25,7 @@ async function apiFetch(endpoint, options = {}) {
 
   const res = await fetch(API_BASE + endpoint, { ...options, headers });
 
-  // Only logout on 401/403 if NOT in demo mode or NOT a demo endpoint
-  if ((res.status === 401 || res.status === 403) && !endpoint.includes('/demo/')) {
+  if (res.status === 401 || res.status === 403) {
     Auth.logout();
     return null;
   }

@@ -61,6 +61,54 @@ async function ensureSchemaCompatibility() {
       );
     }
 
+    const [timeModeRows] = await pool.execute(
+      `SELECT COUNT(*) AS cnt
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'config_usuario'
+         AND COLUMN_NAME = 'hora_modo'`
+    );
+
+    if ((timeModeRows[0]?.cnt || 0) === 0) {
+      await pool.execute(
+        `ALTER TABLE config_usuario
+           ADD COLUMN hora_modo VARCHAR(10) NOT NULL DEFAULT 'auto'
+           COMMENT 'auto | manual'`
+      );
+    }
+
+    const [tzRows] = await pool.execute(
+      `SELECT COUNT(*) AS cnt
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'config_usuario'
+         AND COLUMN_NAME = 'zona_horaria'`
+    );
+
+    if ((tzRows[0]?.cnt || 0) === 0) {
+      await pool.execute(
+        `ALTER TABLE config_usuario
+           ADD COLUMN zona_horaria VARCHAR(64) NOT NULL DEFAULT 'America/Mexico_City'
+           COMMENT 'IANA timezone'`
+      );
+    }
+
+    const [fmtRows] = await pool.execute(
+      `SELECT COUNT(*) AS cnt
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'config_usuario'
+         AND COLUMN_NAME = 'formato_hora'`
+    );
+
+    if ((fmtRows[0]?.cnt || 0) === 0) {
+      await pool.execute(
+        `ALTER TABLE config_usuario
+           ADD COLUMN formato_hora VARCHAR(2) NOT NULL DEFAULT '24'
+           COMMENT '12 | 24'`
+      );
+    }
+
     await pool.execute(
       `CREATE TABLE IF NOT EXISTS device_api_keys (
          id           INT          NOT NULL AUTO_INCREMENT,

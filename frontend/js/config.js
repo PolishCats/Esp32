@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('generate-key-btn')?.addEventListener('click', generateDeviceKey);
   document.getElementById('logout-btn')?.addEventListener('click', () => Auth.logout());
 
+  document.getElementById('hora_modo')?.addEventListener('change', syncTimeModeUI);
+
   // Range input live update
   document.querySelectorAll('input[type="range"]').forEach(input => {
     const display = document.getElementById(input.id + '-val');
@@ -36,7 +38,10 @@ async function loadConfig() {
     setVal('alerta_maxima',         c.alerta_maxima);
     setVal('retencion_dias',        c.retencion_dias);
     setVal('max_datos_por_minuto',  c.max_datos_por_minuto);
-    setTimeVal('hora_programada',   c.hora_programada);
+    setSelectVal('hora_modo',       c.hora_modo);
+    setSelectVal('zona_horaria',    c.zona_horaria);
+    setSelectVal('formato_hora',    c.formato_hora);
+    syncTimeModeUI();
 
     // Update range display values
     document.querySelectorAll('input[type="range"]').forEach(input => {
@@ -60,7 +65,9 @@ async function saveConfig(e) {
     alerta_maxima:         getNumVal('alerta_maxima'),
     retencion_dias:        getNumVal('retencion_dias'),
     max_datos_por_minuto:  getNumVal('max_datos_por_minuto'),
-    hora_programada:       getTimeVal('hora_programada'),
+    hora_modo:             getSelectVal('hora_modo'),
+    zona_horaria:          getSelectVal('zona_horaria'),
+    formato_hora:          getSelectVal('formato_hora'),
   };
 
   // Validate ordering
@@ -94,6 +101,20 @@ function setVal(id, value) {
 function setTimeVal(id, value) {
   const el = document.getElementById(id);
   if (el) el.value = value ? String(value).slice(0, 5) : '12:00';
+}
+
+function setSelectVal(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value ?? el.value;
+}
+
+function syncTimeModeUI() {
+  const modeEl = document.getElementById('hora_modo');
+  const tzEl = document.getElementById('zona_horaria');
+  if (!modeEl || !tzEl) return;
+  const manual = modeEl.value === 'manual';
+  tzEl.disabled = !manual;
+  tzEl.closest('.form-group')?.classList.toggle('is-disabled', !manual);
 }
 
 async function loadDeviceKeys() {
@@ -233,7 +254,7 @@ function getNumVal(id) {
   return el ? parseInt(el.value, 10) : undefined;
 }
 
-function getTimeVal(id) {
+function getSelectVal(id) {
   const el = document.getElementById(id);
   return el ? el.value : undefined;
 }

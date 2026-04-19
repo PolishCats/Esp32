@@ -5,24 +5,41 @@ const { pool }       = require('../config/database');
 const { sendReport } = require('../utils/emailSender');
 const PDFDocument    = require('pdfkit');
 
-const REPORT_TIMEZONE = 'America/Mexico_City';
+function getUserTimeConfig(config = {}) {
+  const serverTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  return {
+    timezone: config.hora_modo === 'manual'
+      ? (config.zona_horaria || 'America/Mexico_City')
+      : serverTimezone,
+    format: config.formato_hora === '12' ? '12' : '24',
+  };
+}
 
-function formatDateTimeParts(ts) {
+function formatDateTimeParts(ts, config = {}) {
+  const { timezone, format } = getUserTimeConfig(config);
   const dateObj = new Date(ts);
   const date = dateObj.toLocaleDateString('es-MX', {
-    timeZone: REPORT_TIMEZONE,
+    timeZone: timezone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
   const time = dateObj.toLocaleTimeString('es-MX', {
-    timeZone: REPORT_TIMEZONE,
+    timeZone: timezone,
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
+    hour12: format === '12',
   });
   return { date, time };
+}
+
+async function fetchUserTimeConfig(userId) {
+  const [rows] = await pool.execute(
+    'SELECT zona_horaria, formato_hora, hora_modo FROM config_usuario WHERE user_id = ?',
+    [userId]
+  );
+  return rows[0] || { zona_horaria: 'America/Mexico_City', formato_hora: '24', hora_modo: 'auto' };
 }
 
 // ── Helper: fetch period data ─────────────────────────────────────────────────
@@ -67,13 +84,14 @@ async function getPeriodData(req, res) {
   try {
     const days = parseInt(req.query.days || '7', 10);
     const rows = await fetchPeriodData(req.user.id, days);
+    const timeConfig = await fetchUserTimeConfig(req.user.id);
     const stats = computeStats(rows);
 
     // Newest first for easy review in UI.
     const ordered = [...rows].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     const formatted = ordered.map((row) => {
-      const parts = formatDateTimeParts(row.timestamp);
+      const parts = formatDateTimeParts(row.timestamp, timeConfig);
       return {
         ...row,
         fecha: parts.date,
@@ -99,10 +117,11 @@ async function downloadCSV(req, res) {
   try {
     const days = parseInt(req.query.days || '7', 10);
     const rows = await fetchPeriodData(req.user.id, days);
+    const timeConfig = await fetchUserTimeConfig(req.user.id);
 
     const header = 'fecha,hora,light_value,estado\n';
     const body   = rows.map(r => {
-      const parts = formatDateTimeParts(r.timestamp);
+      const parts = formatDateTimeParts(r.timestamp, timeConfig);
       return `${parts.date},${parts.time},${r.light_value},${r.estado}`;
     }).join('\n');
 
@@ -122,6 +141,7 @@ async function downloadPDF(req, res) {
     const rows  = await fetchPeriodData(req.user.id, days);
     const alerts = await fetchAlertsSummary(req.user.id, days);
     const stats = computeStats(rows);
+    const timeConfig = await fetchUserTimeConfig(req.user.id);
 
     const doc = new PDFDocument({ margin: 50 });
 
@@ -133,7 +153,7 @@ async function downloadPDF(req, res) {
     doc.fontSize(22).font('Helvetica-Bold')
        .text('Reporte de Sensor LDR - ESP32', { align: 'center' });
     doc.moveDown(0.5);
-     const generated = formatDateTimeParts(new Date());
+    const generated = formatDateTimeParts(new Date(), timeConfig);
      doc.fontSize(12).font('Helvetica')
        .text(`Período: últimos ${days} días`, { align: 'center' });
      doc.text(`Generado: ${generated.date} ${generated.time}`, { align: 'center' });
@@ -170,7 +190,7 @@ async function downloadPDF(req, res) {
     doc.moveDown(0.2);
     const sample = rows.slice(-50);
     sample.forEach(r => {
-      const parts = formatDateTimeParts(r.timestamp);
+      const parts = formatDateTimeParts(r.timestamp, timeConfig);
       const fecha = parts.date.padEnd(12, ' ');
       const hora = parts.time.padEnd(10, ' ');
       const valor = String(r.light_value).padEnd(10, ' ');

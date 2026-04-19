@@ -119,7 +119,7 @@ router.post('/', authenticateDevice, async (req, res) => {
   }
 });
 
-// ── GET /api/data/simulate  (demo: insert random values) ─────────────────────
+// ── GET /api/data/simulate  (insert random values) ───────────────────────────
 router.post('/simulate', authenticateToken, async (req, res) => {
   try {
     const count = Math.min(parseInt(req.body.count || '1', 10), 50);
@@ -150,7 +150,8 @@ router.post('/simulate', authenticateToken, async (req, res) => {
 router.delete('/cleanup', authenticateToken, async (req, res) => {
   try {
     const days = req.body.days ? parseInt(req.body.days, 10) : undefined;
-    const result = await manualCleanup(req.user.id, days);
+    const clearAllAlerts = req.body.clearAllAlerts === true;
+    const result = await manualCleanup(req.user.id, { days, clearAllAlerts });
     return res.json({ success: true, ...result });
   } catch (err) {
     console.error('[data.cleanup]', err);
