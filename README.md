@@ -145,7 +145,6 @@ docker compose down
 | Metodo | Ruta | Auth | Descripcion |
 |---|---|---|---|
 | POST | /api/data | JWT o API Key | Guardar lectura del sensor |
-| POST | /api/data/simulate | JWT | Generar lecturas aleatorias |
 | DELETE | /api/data/cleanup | JWT | Limpieza manual |
 | GET | /api/data/led-state | JWT o API Key | Leer estado LED para ESP32 |
 

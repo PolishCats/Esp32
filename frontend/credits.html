@@ -59,10 +59,10 @@
       <div class="credits-hero">
         <div class="hero-icon">💡</div>
         <h1>ESP32 LDR Monitor</h1>
-        <p>Sistema completo de monitoreo de sensor de luz basado en ESP32</p>
+        <p>Plataforma IoT para monitoreo, alertas y reportes de luminosidad en tiempo real</p>
         <div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap">
-          <span class="tech-badge">v1.0.0</span>
-          <span class="tech-badge">Open Source</span>
+          <span class="tech-badge">v1.2.0</span>
+          <span class="tech-badge">Docker Ready</span>
           <span class="tech-badge">2026</span>
         </div>
       </div>
@@ -73,11 +73,31 @@
         <div class="credit-card">
           <h3>📋 Sobre el Proyecto</h3>
           <p>
-            Plataforma web para visualizar en tiempo real los datos de un sensor LDR
-            (Light Dependent Resistor) conectado a un microcontrolador ESP32.
-            Permite monitorear la intensidad de luz ambiente, configurar alertas,
-            generar reportes y mantener un historial de lecturas.
+            Solución web completa para visualizar datos enviados por un ESP32 con sensor LDR,
+            administrar dispositivos y operar un panel de control centralizado.
+            Incluye autenticación segura, configuración remota, generación de reportes y
+            almacenamiento histórico para análisis de comportamiento lumínico.
           </p>
+        </div>
+
+        <!-- Creators -->
+        <div class="credit-card">
+          <h3>👥 Creadores del Proyecto</h3>
+          <p style="margin-bottom:.6rem">Visita el perfil de GitHub de cada integrante:</p>
+          <div class="creator-list">
+            <div class="creator-item">
+              <span class="creator-name">Antonio Vega</span>
+              <a class="creator-link" href="https://github.com/HelloAVega" target="_blank" rel="noopener noreferrer">Ir a GitHub</a>
+            </div>
+            <div class="creator-item">
+              <span class="creator-name">Anders Cueto</span>
+              <a class="creator-link" href="https://github.com/PolishCats" target="_blank" rel="noopener noreferrer">Ir a GitHub</a>
+            </div>
+            <div class="creator-item">
+              <span class="creator-name">Deimer Torres</span>
+              <a class="creator-link" href="https://github.com/Deimer0819" target="_blank" rel="noopener noreferrer">Ir a GitHub</a>
+            </div>
+          </div>
         </div>
 
         <!-- Technologies -->
@@ -95,6 +115,7 @@
             <span class="tech-badge">bcrypt</span>
             <span class="tech-badge">Nodemailer</span>
             <span class="tech-badge">PDFKit</span>
+            <span class="tech-badge">Docker Compose</span>
             <span class="tech-badge">ESP32</span>
             <span class="tech-badge">LDR Sensor</span>
           </div>
@@ -106,6 +127,7 @@
           <ul>
             <li>Autenticación segura con JWT y bcrypt</li>
             <li>Dashboard con gráficos en tiempo real</li>
+            <li>Gestión de dispositivos ESP32 y API Keys</li>
             <li>Gráfico histórico de 24 horas</li>
             <li>Sistema de alertas configurables</li>
             <li>Indicador de estado del ESP32</li>
@@ -113,6 +135,7 @@
             <li>Envío de reportes por correo</li>
             <li>Limpieza automática de datos</li>
             <li>Panel de configuración de rangos</li>
+            <li>Despliegue rápido con Docker Compose</li>
             <li>Diseño responsive (móvil/escritorio)</li>
           </ul>
         </div>
@@ -139,7 +162,6 @@
             <li><code>POST /api/auth/login</code> – Iniciar sesión</li>
             <li><code>POST /api/auth/register</code> – Registro</li>
             <li><code>POST /api/data</code> – Enviar lectura (ESP32)</li>
-            <li><code>POST /api/data/simulate</code> – Simular datos</li>
             <li><code>GET  /api/dashboard/latest</code> – Última lectura</li>
             <li><code>GET  /api/dashboard/historical</code> – Histórico</li>
             <li><code>GET  /api/reports/csv</code> – Descargar CSV</li>
@@ -150,18 +172,18 @@
         <!-- Setup -->
         <div class="credit-card">
           <h3>🚀 Instalación Rápida</h3>
-          <p style="margin-bottom:.5rem">1. Clonar repositorio</p>
-          <p style="margin-bottom:.5rem">2. Importar <code>sql/schema.sql</code> en MySQL</p>
-          <p style="margin-bottom:.5rem">3. Copiar <code>.env.example</code> a <code>.env</code> y configurar</p>
-          <p style="margin-bottom:.5rem">4. <code>cd backend &amp;&amp; npm install</code></p>
-          <p style="margin-bottom:.5rem">5. <code>npm start</code></p>
-          <p>6. Abrir <code>http://localhost:3000</code></p>
+          <p style="margin-bottom:.5rem">1. Clonar repositorio y ubicarte en la carpeta raíz</p>
+          <p style="margin-bottom:.5rem">2. Verificar que Docker Desktop esté iniciado</p>
+          <p style="margin-bottom:.5rem">3. Ejecutar <code>docker compose -f docker/docker-compose.yml up -d</code></p>
+          <p style="margin-bottom:.5rem">4. Confirmar estado con <code>docker compose -f docker/docker-compose.yml ps</code></p>
+          <p>5. Abrir <code>http://localhost:3000</code></p>
         </div>
 
       </div><!-- /credits-grid -->
 
       <div style="text-align:center;margin-top:2rem;font-size:.82rem;color:var(--text-muted)">
-        Hecho con ❤️ para la comunidad de makers y el aprendizaje de IoT.
+        Conoce el código fuente en el repositorio oficial del proyecto:
+        <a href="https://github.com/PolishCats/Esp32" target="_blank" rel="noopener noreferrer">github.com/PolishCats/Esp32
       </div>
 
     </div>

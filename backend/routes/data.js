@@ -119,33 +119,6 @@ router.post('/', authenticateDevice, async (req, res) => {
   }
 });
 
-// ── GET /api/data/simulate  (insert random values) ───────────────────────────
-router.post('/simulate', authenticateToken, async (req, res) => {
-  try {
-    const count = Math.min(parseInt(req.body.count || '1', 10), 50);
-    const [cfgRows] = await pool.execute(
-      'SELECT * FROM config_usuario WHERE user_id = ?',
-      [req.user.id]
-    );
-    const config = cfgRows[0] || {};
-
-    const inserted = [];
-    for (let i = 0; i < count; i++) {
-      const lightValue = Math.floor(Math.random() * 4096);
-      const estado     = determineEstado(lightValue, config);
-      await pool.execute(
-        'INSERT INTO sensor_data (user_id, light_value, estado) VALUES (?, ?, ?)',
-        [req.user.id, lightValue, estado]
-      );
-      inserted.push({ lightValue, estado });
-    }
-    return res.json({ success: true, inserted });
-  } catch (err) {
-    console.error('[data.simulate]', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-});
-
 // ── DELETE /api/data/cleanup  (manual cleanup) ────────────────────────────────
 router.delete('/cleanup', authenticateToken, async (req, res) => {
   try {
