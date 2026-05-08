@@ -4,13 +4,13 @@
 
 Conectar tu ESP32 para:
 - Enviar lecturas LDR al backend
-- Recibir estado remoto de LED (GPIO 32)
-- Visualizar todo en dashboard autenticado
+- Consultar el estado remoto del LED (GPIO 32)
+- Visualizar todo en el dashboard autenticado
 
 ## 2. Requisitos
 
 - Backend ejecutandose en `http://<ip_servidor>:3000`
-- Usuario autenticado en la web
+- Usuario autenticado en la web si vas a crear API Keys
 - API Key de dispositivo generada desde Configuracion
 
 Opcionalmente, puedes levantar backend + base de datos con Docker:
@@ -27,7 +27,7 @@ docker compose up -d --build
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"Admin1234!"}'
+  -d '{"username":"<tu_usuario>","password":"<tu_password>"}'
 ```
 
 ### Crear API Key
@@ -41,9 +41,15 @@ curl -X POST http://localhost:3000/api/devices/keys \
 
 Guarda el `api_key` devuelto.
 
-## 4. Endpoints para ESP32
+## 4. Autenticacion para dispositivos
 
-### 4.1 Enviar dato LDR
+El backend acepta dos opciones para `POST /api/data` y `GET /api/data/led-state`:
+- `X-API-Key: <api_key>`
+- `Authorization: Bearer <jwt>`
+
+## 5. Endpoints para ESP32
+
+### 5.1 Enviar dato LDR
 
 `POST /api/data`
 
@@ -59,7 +65,17 @@ Body:
 }
 ```
 
-### 4.2 Consultar estado LED
+Respuesta esperada:
+```json
+{
+  "success": true,
+  "estado": "medio",
+  "intervalo_recoleccion": 5,
+  "max_datos_por_minuto": 60
+}
+```
+
+### 5.2 Consultar estado LED
 
 `GET /api/data/led-state`
 
@@ -76,7 +92,7 @@ Respuesta:
 }
 ```
 
-## 5. Codigo base recomendado
+## 6. Codigo base recomendado
 
 Usa como base el archivo:
 - `ESP32_LDR_Example.ino`
@@ -85,15 +101,16 @@ Ese ejemplo ya incluye:
 - Lectura ADC de LDR (`GPIO34`)
 - POST a `/api/data`
 - Polling de `/api/data/led-state`
-- Aplicacion de estado LED en `GPIO32`
+- Aplicacion del estado LED en `GPIO32`
 
-## 6. Validaciones y limites
+## 7. Validaciones y limites
 
 - `light_value` debe estar entre `0` y `4095`
+- `intervalo_recoleccion` debe estar entre `1` y `3600`
 - Limite de datos por dispositivo
 - API Key debe existir y estar activa
 
-## 7. Pruebas rapidas
+## 8. Pruebas rapidas
 
 ```bash
 # Health
@@ -103,17 +120,17 @@ curl http://localhost:3000/api/health
 curl -X POST http://localhost:3000/api/data \
   -H "X-API-Key: <api_key>" \
   -H "Content-Type: application/json" \
-  -d '{"light_value": 1800}'
+  -d '{"light_value": 1800, "intervalo_recoleccion": 5}'
 
 # Leer estado LED
 curl -X GET http://localhost:3000/api/data/led-state \
   -H "X-API-Key: <api_key>"
 ```
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 - `401 Token o API Key requerida`
-  - Falta `X-API-Key` o token
+  - Falta `X-API-Key` o `Authorization: Bearer <jwt>`
 - `403 API Key invalida o desactivada`
   - API Key incorrecta o desactivada
 - `400 light_value...`
